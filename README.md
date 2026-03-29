@@ -1,4 +1,4 @@
-# firecracker-dock
+# firecracker-docker
 
 vibed collection of scripts to run firecracker in a docker container with an vm image built with
 docker.
