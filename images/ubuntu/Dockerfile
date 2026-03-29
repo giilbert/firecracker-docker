@@ -1,7 +1,6 @@
 FROM ubuntu:24.04
 
-RUN apt-get update && apt-get -y install sudo && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get -y install sudo iproute2 iptables
 
 # create user and auto login to serial console
 RUN useradd -m -s /bin/bash guest && echo "guest:password" | chpasswd && \
@@ -18,3 +17,10 @@ RUN echo "guest ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
 RUN echo "guest ALL=(ALL) NOPASSWD:/sbin/reboot" >> /etc/sudoers && \
     echo "sudo /sbin/reboot -f" >> /home/guest/.bash_logout && \
     echo "#!/bin/bash\nsudo /sbin/reboot -f" > /usr/bin/stop-guest && chmod +x /usr/bin/stop-guest
+
+RUN chmod u+s /usr/bin/ping
+
+# configure network for guest
+RUN mkdir -p /etc/systemd/network && \
+    printf '[Match]\nName=eth0\n\n[Network]\nAddress=172.16.0.2/24\nGateway=172.16.0.1\nDNS=8.8.8.8\n' \
+    > /etc/systemd/network/10-eth0.network

@@ -27,7 +27,13 @@
   },
   "cpu-config": null,
   "balloon": null,
-  "network-interfaces": [],
+  "network-interfaces": [
+    {
+      "iface_id": "eth0",
+      "guest_mac": "AA:FC:00:00:00:01",
+      "host_dev_name": "tap0"
+    }
+  ],
   "vsock": null,
   "logger": null,
   "metrics": null,
