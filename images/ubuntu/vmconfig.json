@@ -1,0 +1,38 @@
+{
+  "boot-source": {
+    "kernel_image_path": "/images/ubuntu/vmlinux",
+    "boot_args": "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda1 rootfstype=ext4 ro",
+    "initrd_path": "/images/ubuntu/initrd.img"
+  },
+  "drives": [
+    {
+      "drive_id": "rootfs",
+      "path_on_host": "/images/ubuntu/ubuntu.raw",
+      "is_root_device": false,
+      "is_read_only": true
+    },
+    {
+      "drive_id": "data",
+      "path_on_host": "/images/ubuntu/data.raw",
+      "is_root_device": false,
+      "is_read_only": false
+    }
+  ],
+  "machine-config": {
+    "vcpu_count": 2,
+    "mem_size_mib": 1024,
+    "smt": false,
+    "track_dirty_pages": false,
+    "huge_pages": "None"
+  },
+  "cpu-config": null,
+  "balloon": null,
+  "network-interfaces": [],
+  "vsock": null,
+  "logger": null,
+  "metrics": null,
+  "mmds-config": null,
+  "entropy": null,
+  "pmem": [],
+  "memory-hotplug": null
+}

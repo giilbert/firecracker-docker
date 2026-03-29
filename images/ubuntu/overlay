@@ -1,0 +1,27 @@
+#!/bin/sh
+PREREQ=""
+prereqs() { echo "$PREREQ"; }
+case "$1" in prereqs) prereqs; exit 0;; esac
+. /scripts/functions
+
+log_begin_msg "Setting up overlay filesystem"
+
+
+echo "overlay: rootmnt=${rootmnt}" > /dev/kmsg
+echo "overlay: devices:" > /dev/kmsg
+ls /dev/vd* > /dev/kmsg 2>&1 || echo "overlay: no vd devices found" > /dev/kmsg
+
+mkdir -p /mnt/data
+blkid /dev/vdb > /dev/kmsg 2>&1 || mkfs.ext4 /dev/vdb
+mount /dev/vdb /mnt/data && echo "overlay: mounted vdb" > /dev/kmsg || echo "overlay: failed to mount vdb" > /dev/kmsg
+mkdir -p /mnt/data/upper /mnt/data/work /mnt/newroot
+
+echo "overlay: installing overlay kernel module" > /dev/kmsg
+insmod /lib/modules/$(uname -r)/kernel/fs/overlayfs/overlay.ko 2>/dev/kmsg && \
+    echo "overlay: insmod ok" > /dev/kmsg || \
+    echo "overlay: insmod failed" > /dev/kmsg
+
+mount -t overlay overlay -o lowerdir=${rootmnt},upperdir=/mnt/data/upper,workdir=/mnt/data/work /mnt/newroot 2>/dev/kmsg
+mount --move /mnt/newroot ${rootmnt} && echo "overlay: pivot done" > /dev/kmsg || echo "overlay: pivot failed" > /dev/kmsg
+
+log_end_msg
