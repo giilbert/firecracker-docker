@@ -10,7 +10,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     linux-image-generic \
     kmod \
     sudo \
-    systemd-sysv
+    systemd-sysv \ 
+    iproute2 \
+    iptables \
+    iputils-ping
 
 # keep systemd/journald quiet on serial console for microvm boots
 RUN mkdir -p /etc/systemd/system.conf.d /etc/systemd/journald.conf.d && \
@@ -147,10 +150,28 @@ ExecStart=/bin/sh -ec 'h=$(cat /etc/hostname 2>/dev/null || hostname); grep -q "
 WantedBy=multi-user.target
 EOF
 
+# set resolv.conf to systemd-resolved managed file at boot
+RUN cat <<'EOF' > /etc/systemd/system/fix-resolv-conf.service
+[Unit]
+Description=Point resolv.conf to systemd-resolved
+After=local-fs.target systemd-resolved.service
+Wants=systemd-resolved.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -ec 'if [ -e /run/systemd/resolve/resolv.conf ]; then rm -f /etc/resolv.conf; ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf; else printf "nameserver 8.8.8.8\nnameserver 1.1.1.1\n" > /etc/resolv.conf; fi; [ -e /etc/resolv.conf ] || printf "nameserver 8.8.8.8\nnameserver 1.1.1.1\n" > /etc/resolv.conf'
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 RUN mkdir -p /etc/systemd/system/multi-user.target.wants && \
     ln -sf /etc/systemd/system/fix-guest-home.service /etc/systemd/system/multi-user.target.wants/fix-guest-home.service && \
     ln -sf /etc/systemd/system/fix-sudo-perms.service /etc/systemd/system/multi-user.target.wants/fix-sudo-perms.service && \
-    ln -sf /etc/systemd/system/fix-hosts.service /etc/systemd/system/multi-user.target.wants/fix-hosts.service
+    ln -sf /etc/systemd/system/fix-hosts.service /etc/systemd/system/multi-user.target.wants/fix-hosts.service && \
+    ln -sf /etc/systemd/system/fix-resolv-conf.service /etc/systemd/system/multi-user.target.wants/fix-resolv-conf.service && \
+    ln -sf /lib/systemd/system/systemd-networkd.service /etc/systemd/system/multi-user.target.wants/systemd-networkd.service && \
+    ln -sf /lib/systemd/system/systemd-resolved.service /etc/systemd/system/multi-user.target.wants/systemd-resolved.service
 
 # non-systemd fallback: run startup repairs and keep ttyS0 autologin via sysvinit
 RUN cat <<'EOF' > /etc/rc.local
@@ -162,6 +183,9 @@ if [ "$(cat /proc/1/comm 2>/dev/null)" != "systemd" ]; then
     h=$(cat /etc/hostname 2>/dev/null || hostname)
     grep -q "127.0.0.1 localhost" /etc/hosts || echo "127.0.0.1 localhost" >> /etc/hosts
     grep -q "127.0.1.1 $h" /etc/hosts || echo "127.0.1.1 $h" >> /etc/hosts
+    if [ ! -e /etc/resolv.conf ]; then
+        printf 'nameserver 8.8.8.8\nnameserver 1.1.1.1\n' > /etc/resolv.conf
+    fi
     chown root:root /etc/sudo.conf /etc/sudoers /etc/sudoers.d /usr/bin/sudo
     chown -R root:root /etc/sudoers.d
     chmod 0644 /etc/sudo.conf
@@ -216,3 +240,8 @@ RUN mkdir -p /etc/systemd/system && \
     ln -sf /dev/null /etc/systemd/system/modprobe@drm.service && \
     ln -sf /dev/null /etc/systemd/system/modprobe@efi_pstore.service && \
     ln -sf /dev/null /etc/systemd/system/modprobe@loop.service
+
+# configure network for guest
+RUN mkdir -p /etc/systemd/network && \
+    printf '[Match]\nName=eth0\n\n[Network]\nAddress=172.16.0.2/24\nGateway=172.16.0.1\nDNS=8.8.8.8\n' \
+    > /etc/systemd/network/10-eth0.network
