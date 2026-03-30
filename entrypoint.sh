@@ -12,4 +12,4 @@ iptables -A FORWARD -i tap0 -o $DEFAULT_IF -j ACCEPT
 iptables -A FORWARD -i $DEFAULT_IF -o tap0 -m state --state RELATED,ESTABLISHED -j ACCEPT
 sysctl -w net.ipv4.ip_forward=1
 
-./firecracker-v1.15.0-x86_64 --no-api --config-file /images/ubuntu/vmconfig.json
+./firecracker-v1.15.0-x86_64 --no-api --config-file /images/base/artifacts/vmconfig.json
